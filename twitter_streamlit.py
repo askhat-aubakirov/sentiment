@@ -8,21 +8,12 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 nlp = spacy.load('en_core_web_sm', disable=['parser', 'ner'])
 headers = pd.read_csv("headers_only.csv")
-#rf_model = joblib.load('rf_model.joblib')
-#vectorizer = TfidfVectorizer(lowercase=False, max_features=10000, ngram_range=(1, 2))
+rf_model = joblib.load('rf_model.joblib')
+vectorizer = TfidfVectorizer(lowercase=False, max_features=10000, ngram_range=(1, 2))
 
 @st.cache_resource
 def load_model():
     return joblib.load('rf_model.joblib')
-
-@st.cache_resource
-def load_vectorizer():
-    vectorizer = TfidfVectorizer(lowercase=False, max_features=10000, ngram_range=(1, 2))
-    vectorizer.fit(headers)
-    return vectorizer
-
-rf_model = load_model()
-vectorizer = load_vectorizer()
 
 def tokenize_and_lemmatize(text):
   """
@@ -45,6 +36,7 @@ def tokenize_and_lemmatize(text):
 
   return new_lemma_tokens
 
+
 def predict_condition(user_input):
   """
   Preprocesses user input, predicts skin condition using the SVM model,
@@ -58,25 +50,21 @@ def predict_condition(user_input):
   """
   try:
       # Lowercase and remove punctuation
-      #user_input = user_input.lower()
-      #user_input = "".join([char for char in user_input if char.isalnum() or char.isspace()])
+      user_input = user_input.lower()
+      user_input = "".join([char for char in user_input if char.isalnum() or char.isspace()])
       
       # Tokenize and lemmatize
-      # lemmatized_text = tokenize_and_lemmatize(user_input)
+      lemmatized_text = tokenize_and_lemmatize(user_input)
       
       # Vectorize the text
-      vectorized_input = vectorizer.fit_transform([user_input])
+      vectorized_input = vectorizer.fit_transform([lemmatized_text])
       vectorized_input = pd.DataFrame(vectorized_input.toarray(), columns=vectorizer.get_feature_names_out())
-      #vectorized_input = pd.DataFrame(vectorized_input)
+      vectorized_input = pd.DataFrame(vectorized_input)
 
       # Load missing columns from training data (if any)
-      missing_columns = set(headers.columns) - set(vectorized_input.columns)
+      #missing_columns = set(headers.columns) - set(vectorized_input.columns)
       vectorized_input = vectorized_input.reindex(columns=headers.columns, fill_value=0)
       #vectorized_input = vectorized_input.assign(**{col: 0 for col in missing_columns})
-      '''
-      for col in missing_columns:
-          vectorized_input[col] = 0
-      '''
 
       vectorized_input = vectorized_input[headers.columns]
       st.write(vectorized_input)
@@ -99,13 +87,13 @@ user_input_text = st.text_area("Write your text here:", height=100)
 if st.button("Predict"):
     prediction = predict_condition(user_input_text)
     if prediction:
-        st.success(f"Predicted sentiment: :blue[{prediction}]. \n")
+        st.success(f"Predicted condition: {prediction}. \n")
     else:
         st.warning("Prediction failed. Please try again and/or consult with developers.")
 
 # Display model information (optional)
 st.header("Model Information")
-st.header("This app is powered by Random Forest and sharp minds of Data Science Club.", divider = 'rainbow')
+st.header("This app is powered by a trained Random Forest model.", divider = 'rainbow')
 
 st.write("- Text to be analyzed sentiment-wise")
 st.write("- Data Science Club Group One")
